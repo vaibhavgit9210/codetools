@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CodeTools - Code Formatter &amp; Diff Checker</title>
+
+  <!-- diff2html CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diff2html@3.4.48/bundles/css/diff2html.min.css">
+
+  <!-- App CSS -->
+  <link rel="stylesheet" href="styles.css">
+
+  <!-- js-beautify -->
+  <script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify-html.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/js-beautify@1.15.1/js/lib/beautify-css.min.js"></script>
+
+  <!-- sql-formatter (v4 UMD for reliable global) -->
+  <script src="https://cdn.jsdelivr.net/npm/sql-formatter@4.0.2/dist/sql-formatter.min.js"></script>
+
+  <!-- Prettier standalone (for JSON) -->
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.3.3/standalone.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.3.3/plugins/babel.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prettier@3.3.3/plugins/estree.js"></script>
+
+  <!-- jsdiff -->
+  <script src="https://cdn.jsdelivr.net/npm/diff@5.2.0/dist/diff.min.js"></script>
+
+  <!-- diff2html JS -->
+  <script src="https://cdn.jsdelivr.net/npm/diff2html@3.4.48/bundles/js/diff2html-ui.min.js"></script>
+
+  <!-- CodeMirror 6 import map (all deps use * prefix for single-instance resolution) -->
+  <script type="importmap">
+  {
+    "imports": {
+      "codemirror":                    "https://esm.sh/*codemirror@^6.0.0",
+      "@codemirror/autocomplete":      "https://esm.sh/*@codemirror/autocomplete@^6.0.0",
+      "@codemirror/commands":          "https://esm.sh/*@codemirror/commands@^6.0.0",
+      "@codemirror/language":          "https://esm.sh/*@codemirror/language@^6.0.0",
+      "@codemirror/lint":              "https://esm.sh/*@codemirror/lint@^6.0.0",
+      "@codemirror/search":            "https://esm.sh/*@codemirror/search@^6.0.0",
+      "@codemirror/state":             "https://esm.sh/*@codemirror/state@^6.0.0",
+      "@codemirror/view":              "https://esm.sh/*@codemirror/view@^6.0.0",
+      "@codemirror/theme-one-dark":    "https://esm.sh/*@codemirror/theme-one-dark@^6.0.0",
+      "@codemirror/lang-javascript":   "https://esm.sh/*@codemirror/lang-javascript@^6.0.0",
+      "@codemirror/lang-json":         "https://esm.sh/*@codemirror/lang-json@^6.0.0",
+      "@codemirror/lang-html":         "https://esm.sh/*@codemirror/lang-html@^6.0.0",
+      "@codemirror/lang-css":          "https://esm.sh/*@codemirror/lang-css@^6.0.0",
+      "@codemirror/lang-sql":          "https://esm.sh/*@codemirror/lang-sql@^6.0.0",
+      "@codemirror/lang-xml":          "https://esm.sh/*@codemirror/lang-xml@^6.0.0",
+      "@codemirror/lang-python":       "https://esm.sh/*@codemirror/lang-python@^6.0.0",
+      "@lezer/common":                 "https://esm.sh/*@lezer/common@^1.0.0",
+      "@lezer/highlight":              "https://esm.sh/*@lezer/highlight@^1.0.0",
+      "@lezer/lr":                     "https://esm.sh/*@lezer/lr@^1.0.0",
+      "@lezer/javascript":             "https://esm.sh/*@lezer/javascript@^1.0.0",
+      "@lezer/json":                   "https://esm.sh/*@lezer/json@^1.0.0",
+      "@lezer/html":                   "https://esm.sh/*@lezer/html@^1.0.0",
+      "@lezer/css":                    "https://esm.sh/*@lezer/css@^1.0.0",
+      "@lezer/xml":                    "https://esm.sh/*@lezer/xml@^1.0.0",
+      "@lezer/python":                 "https://esm.sh/*@lezer/python@^1.0.0",
+      "style-mod":                     "https://esm.sh/*style-mod@^4.0.0",
+      "w3c-keyname":                   "https://esm.sh/*w3c-keyname@^2.0.0",
+      "crelt":                         "https://esm.sh/*crelt@^1.0.0"
+    }
+  }
+  </script>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <svg class="logo-icon" viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="16 18 22 12 16 6"></polyline>
+        <polyline points="8 6 2 12 8 18"></polyline>
+      </svg>
+      <h1 class="header-title">CodeTools</h1>
+    </div>
+    <div class="header-right">
+      <button id="theme-toggle" class="icon-btn" title="Toggle dark/light theme" aria-label="Toggle theme">
+        <!-- Sun icon (shown in dark mode) -->
+        <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <!-- Moon icon (shown in light mode) -->
+        <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Tab Navigation -->
+  <nav class="tab-nav">
+    <button class="tab-btn active" data-tab="format">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="21" y1="10" x2="3" y2="10"></line>
+        <line x1="21" y1="6" x2="3" y2="6"></line>
+        <line x1="21" y1="14" x2="3" y2="14"></line>
+        <line x1="21" y1="18" x2="3" y2="18"></line>
+      </svg>
+      Format
+    </button>
+    <button class="tab-btn" data-tab="diff">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 3v18"></path>
+        <rect x="2" y="6" width="8" height="12" rx="1"></rect>
+        <rect x="14" y="6" width="8" height="12" rx="1"></rect>
+      </svg>
+      Diff
+    </button>
+    <div class="tab-indicator"></div>
+  </nav>
+
+  <!-- Format Panel -->
+  <section id="format-panel" class="panel active">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <label for="format-language" class="toolbar-label">Language</label>
+        <select id="format-language" class="toolbar-select">
+          <option value="javascript">JavaScript</option>
+          <option value="json" selected>JSON</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+          <option value="sql">SQL</option>
+          <option value="xml">XML</option>
+          <option value="python">Python</option>
+        </select>
+      </div>
+      <div class="toolbar-group" id="sql-dialect-group" style="display: none;">
+        <label for="sql-dialect" class="toolbar-label">Dialect</label>
+        <select id="sql-dialect" class="toolbar-select">
+          <option value="sql">Standard SQL</option>
+          <option value="mysql">MySQL</option>
+          <option value="postgresql">PostgreSQL</option>
+          <option value="plsql">PL/SQL</option>
+          <option value="tsql">T-SQL</option>
+          <option value="spark">Spark SQL</option>
+          <option value="mariadb">MariaDB</option>
+          <option value="redshift">Redshift</option>
+        </select>
+      </div>
+      <div class="toolbar-actions">
+        <button id="format-btn" class="btn btn-primary" title="Format code (Ctrl+Enter)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Format
+        </button>
+        <button id="format-copy-btn" class="btn btn-secondary" title="Copy output">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          Copy
+        </button>
+        <button id="format-clear-btn" class="btn btn-ghost" title="Clear editors">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          Clear
+        </button>
+      </div>
+    </div>
+
+    <!-- Editors -->
+    <div class="editors-grid">
+      <div class="editor-pane">
+        <div class="editor-label">Input</div>
+        <div id="format-input-editor" class="editor-mount"></div>
+      </div>
+      <div class="editor-pane">
+        <div class="editor-label">Output</div>
+        <div id="format-output-editor" class="editor-mount"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Diff Panel -->
+  <section id="diff-panel" class="panel">
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="toolbar-group">
+        <label for="diff-language" class="toolbar-label">Language</label>
+        <select id="diff-language" class="toolbar-select">
+          <option value="javascript">JavaScript</option>
+          <option value="json" selected>JSON</option>
+          <option value="html">HTML</option>
+          <option value="css">CSS</option>
+          <option value="sql">SQL</option>
+          <option value="xml">XML</option>
+          <option value="python">Python</option>
+        </select>
+      </div>
+      <div class="toolbar-group">
+        <label for="diff-view-mode" class="toolbar-label">View</label>
+        <select id="diff-view-mode" class="toolbar-select">
+          <option value="line-by-line">Inline</option>
+          <option value="side-by-side">Side by Side</option>
+        </select>
+      </div>
+      <div class="toolbar-actions">
+        <button id="diff-btn" class="btn btn-primary" title="Compute diff (Ctrl+Enter)">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          Compute Diff
+        </button>
+        <button id="diff-swap-btn" class="btn btn-secondary" title="Swap panels">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="17 1 21 5 17 9"></polyline>
+            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
+            <polyline points="7 23 3 19 7 15"></polyline>
+            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+          </svg>
+          Swap
+        </button>
+        <button id="diff-clear-btn" class="btn btn-ghost" title="Clear editors">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          Clear
+        </button>
+      </div>
+    </div>
+
+    <!-- Editors -->
+    <div class="editors-grid">
+      <div class="editor-pane">
+        <div class="editor-label">Original</div>
+        <div id="diff-original-editor" class="editor-mount"></div>
+      </div>
+      <div class="editor-pane">
+        <div class="editor-label">Modified</div>
+        <div id="diff-modified-editor" class="editor-mount"></div>
+      </div>
+    </div>
+
+    <!-- Diff Output -->
+    <div id="diff-output" class="diff-output"></div>
+  </section>
+
+  <!-- Status Bar -->
+  <div id="status-bar" class="status-bar"></div>
+
+  <!-- App Scripts (ES modules) -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>

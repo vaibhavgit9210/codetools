@@ -3,9 +3,16 @@
  * handles tab/theme switching, keyboard shortcuts.
  */
 
-import { basicSetup } from 'codemirror';
-import { EditorView } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers, highlightActiveLineGutter,
+         highlightSpecialChars, drawSelection, dropCursor,
+         rectangularSelection, crosshairCursor, highlightActiveLine } from '@codemirror/view';
 import { EditorState, Compartment } from '@codemirror/state';
+import { syntaxHighlighting, defaultHighlightStyle, indentOnInput,
+         bracketMatching, foldGutter, foldKeymap } from '@codemirror/language';
+import { history, defaultKeymap, historyKeymap } from '@codemirror/commands';
+import { searchKeymap, highlightSelectionMatches } from '@codemirror/search';
+import { closeBrackets, closeBracketsKeymap, autocompletion, completionKeymap } from '@codemirror/autocomplete';
+import { lintKeymap } from '@codemirror/lint';
 import { javascript } from '@codemirror/lang-javascript';
 import { json } from '@codemirror/lang-json';
 import { html } from '@codemirror/lang-html';
@@ -17,6 +24,21 @@ import { oneDark } from '@codemirror/theme-one-dark';
 
 import { formatCode } from './formatter.js';
 import { computeAndRenderDiff } from './differ.js';
+
+// ===== Basic setup (built from individual extensions) =====
+const basicSetup = [
+  lineNumbers(), highlightActiveLineGutter(), highlightSpecialChars(),
+  history(), foldGutter(), drawSelection(), dropCursor(),
+  EditorState.allowMultipleSelections.of(true), indentOnInput(),
+  syntaxHighlighting(defaultHighlightStyle, { fallback: true }),
+  bracketMatching(), closeBrackets(), autocompletion(),
+  rectangularSelection(), crosshairCursor(), highlightActiveLine(),
+  highlightSelectionMatches(),
+  keymap.of([
+    ...closeBracketsKeymap, ...defaultKeymap, ...searchKeymap,
+    ...historyKeymap, ...foldKeymap, ...completionKeymap, ...lintKeymap,
+  ]),
+];
 
 // ===== Language map =====
 const languageExtensions = {
@@ -41,7 +63,7 @@ function createEditor(mountId, { readOnly = false, language = 'json' } = {}) {
   const langExt = languageExtensions[language] ? languageExtensions[language]() : [];
 
   const extensions = [
-    basicSetup,
+    ...basicSetup,
     langCompartment.of(langExt),
     themeCompartment.of(isDark ? oneDark : []),
     readOnlyCompartment.of(EditorState.readOnly.of(readOnly)),

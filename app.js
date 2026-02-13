@@ -230,14 +230,18 @@ async function handleDiff() {
   }
 
   try {
-    // Format all editors that have content, then update their contents
-    for (const key of keysWithContent) {
-      const raw = getEditorContent(getDiffEditor(key));
-      try {
-        const formatted = await formatCode(raw, language);
-        setEditorContent(getDiffEditor(key), formatted);
-      } catch {
-        // If formatting fails (e.g. invalid syntax), keep the raw content
+    // Format all editors that have content in parallel, then update their contents
+    const sqlDialect = document.getElementById('sql-dialect')?.value;
+    const formatResults = await Promise.allSettled(
+      keysWithContent.map(async (key) => {
+        const raw = getEditorContent(getDiffEditor(key));
+        const formatted = await formatCode(raw, language, { sqlDialect });
+        return { key, formatted };
+      })
+    );
+    for (const result of formatResults) {
+      if (result.status === 'fulfilled') {
+        setEditorContent(getDiffEditor(result.value.key), result.value.formatted);
       }
     }
 

@@ -199,10 +199,8 @@ async function handleFormat() {
 }
 
 // ===== Diff action =====
-function handleDiff() {
+async function handleDiff() {
   const baseKey = diffState.primary;
-  const baseContent = getEditorContent(getDiffEditor(baseKey));
-  const baseTitle = getDiffEditorTitle(baseKey);
   const viewMode = document.getElementById('diff-view-mode').value;
   const language = document.getElementById('diff-language').value;
   const container = document.getElementById('diff-output-container');
@@ -210,16 +208,18 @@ function handleDiff() {
   // Clear previous output
   container.innerHTML = '';
 
-  // Find non-empty other editors
-  const otherKeys = ['A', 'B', 'C'].filter(k => k !== baseKey);
+  // Identify editors with content
+  const allKeys = ['A', 'B', 'C'];
+  const keysWithContent = allKeys.filter(k => getEditorContent(getDiffEditor(k)).trim());
+  const otherKeys = allKeys.filter(k => k !== baseKey);
   const othersWithContent = otherKeys.filter(k => getEditorContent(getDiffEditor(k)).trim());
 
-  if (!baseContent.trim() && othersWithContent.length === 0) {
+  if (!getEditorContent(getDiffEditor(baseKey)).trim() && othersWithContent.length === 0) {
     showStatus('Enter content in at least two editors', 'error');
     return;
   }
 
-  if (!baseContent.trim()) {
+  if (!getEditorContent(getDiffEditor(baseKey)).trim()) {
     showStatus('Base editor is empty', 'error');
     return;
   }
@@ -229,9 +229,23 @@ function handleDiff() {
     return;
   }
 
-  let allIdentical = true;
-
   try {
+    // Format all editors that have content, then update their contents
+    for (const key of keysWithContent) {
+      const raw = getEditorContent(getDiffEditor(key));
+      try {
+        const formatted = await formatCode(raw, language);
+        setEditorContent(getDiffEditor(key), formatted);
+      } catch {
+        // If formatting fails (e.g. invalid syntax), keep the raw content
+      }
+    }
+
+    // Now compute diffs using the (formatted) content
+    const baseContent = getEditorContent(getDiffEditor(baseKey));
+    const baseTitle = getDiffEditorTitle(baseKey);
+    let allIdentical = true;
+
     for (const otherKey of othersWithContent) {
       const otherContent = getEditorContent(getDiffEditor(otherKey));
       const otherTitle = getDiffEditorTitle(otherKey);

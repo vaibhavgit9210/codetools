@@ -82,8 +82,39 @@ function createEditor(mountId, { readOnly = false, language = 'json' } = {}) {
 function initEditors() {
   editors.formatInput = createEditor('format-input-editor', { language: 'json' });
   editors.formatOutput = createEditor('format-output-editor', { readOnly: true, language: 'json' });
-  editors.diffOriginal = createEditor('diff-original-editor', { language: 'json' });
-  editors.diffModified = createEditor('diff-modified-editor', { language: 'json' });
+  editors.diffA = createEditor('diff-editor-a', { language: 'json' });
+  editors.diffB = createEditor('diff-editor-b', { language: 'json' });
+  editors.diffC = createEditor('diff-editor-c', { language: 'json' });
+}
+
+// ===== Diff state =====
+const diffState = { primary: 'A' };
+
+function getDiffEditor(key) {
+  return editors[`diff${key}`];
+}
+
+function getDiffEditorTitle(key) {
+  const input = document.querySelector(`.editor-title-input[data-editor="${key}"]`);
+  return (input && input.value.trim()) || `Editor ${key}`;
+}
+
+function setDiffPrimary(key) {
+  diffState.primary = key;
+  // Update radio buttons
+  const radio = document.querySelector(`.primary-radio[value="${key}"]`);
+  if (radio) radio.checked = true;
+  // Update is-primary class on panes
+  ['A', 'B', 'C'].forEach(k => {
+    const pane = document.getElementById(`diff-pane-${k.toLowerCase()}`);
+    if (pane) pane.classList.toggle('is-primary', k === key);
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
 // ===== Editor helpers =====
@@ -169,23 +200,72 @@ async function handleFormat() {
 
 // ===== Diff action =====
 function handleDiff() {
-  const original = getEditorContent(editors.diffOriginal);
-  const modified = getEditorContent(editors.diffModified);
+  const baseKey = diffState.primary;
+  const baseContent = getEditorContent(getDiffEditor(baseKey));
+  const baseTitle = getDiffEditorTitle(baseKey);
   const viewMode = document.getElementById('diff-view-mode').value;
   const language = document.getElementById('diff-language').value;
-  const targetEl = document.getElementById('diff-output');
+  const container = document.getElementById('diff-output-container');
+
+  // Clear previous output
+  container.innerHTML = '';
+
+  // Find non-empty other editors
+  const otherKeys = ['A', 'B', 'C'].filter(k => k !== baseKey);
+  const othersWithContent = otherKeys.filter(k => getEditorContent(getDiffEditor(k)).trim());
+
+  if (!baseContent.trim() && othersWithContent.length === 0) {
+    showStatus('Enter content in at least two editors', 'error');
+    return;
+  }
+
+  if (!baseContent.trim()) {
+    showStatus('Base editor is empty', 'error');
+    return;
+  }
+
+  if (othersWithContent.length === 0) {
+    showStatus('Enter content in at least one other editor', 'error');
+    return;
+  }
+
+  let allIdentical = true;
 
   try {
-    const result = computeAndRenderDiff(original, modified, {
-      targetEl,
-      viewMode,
-      fileName: `file.${language}`,
-    });
+    for (const otherKey of othersWithContent) {
+      const otherContent = getEditorContent(getDiffEditor(otherKey));
+      const otherTitle = getDiffEditorTitle(otherKey);
 
-    if (result.identical) {
+      // Create diff result wrapper
+      const resultEl = document.createElement('div');
+      resultEl.className = 'diff-result';
+
+      const headerEl = document.createElement('div');
+      headerEl.className = 'diff-result-header';
+      headerEl.innerHTML = `<span class="base-name">${escapeHtml(baseTitle)}</span> vs ${escapeHtml(otherTitle)}`;
+      resultEl.appendChild(headerEl);
+
+      const bodyEl = document.createElement('div');
+      bodyEl.className = 'diff-result-body';
+      resultEl.appendChild(bodyEl);
+
+      container.appendChild(resultEl);
+
+      const result = computeAndRenderDiff(baseContent, otherContent, {
+        targetEl: bodyEl,
+        viewMode,
+        fileName: `file.${language}`,
+        baseLabel: baseTitle,
+        otherLabel: otherTitle,
+      });
+
+      if (!result.identical) allIdentical = false;
+    }
+
+    if (allIdentical) {
       showStatus('No differences found', 'success');
     } else {
-      showStatus('Diff computed successfully', 'success');
+      showStatus(`Diff computed — ${othersWithContent.length} comparison${othersWithContent.length > 1 ? 's' : ''}`, 'success');
     }
   } catch (err) {
     showStatus(err.message, 'error');
@@ -208,13 +288,26 @@ async function handleCopy() {
   }
 }
 
-// ===== Swap diff panels =====
-function handleSwap() {
-  const original = getEditorContent(editors.diffOriginal);
-  const modified = getEditorContent(editors.diffModified);
-  setEditorContent(editors.diffOriginal, modified);
-  setEditorContent(editors.diffModified, original);
-  showStatus('Panels swapped', 'success');
+// ===== Cycle diff panels (A→B→C→A) =====
+function handleCycle() {
+  const keys = ['A', 'B', 'C'];
+  const contents = keys.map(k => getEditorContent(getDiffEditor(k)));
+  const titles = keys.map(k => {
+    const input = document.querySelector(`.editor-title-input[data-editor="${k}"]`);
+    return input ? input.value : '';
+  });
+
+  // Rotate: A gets C's content, B gets A's, C gets B's
+  setEditorContent(getDiffEditor('A'), contents[2]);
+  setEditorContent(getDiffEditor('B'), contents[0]);
+  setEditorContent(getDiffEditor('C'), contents[1]);
+
+  const titleInputs = keys.map(k => document.querySelector(`.editor-title-input[data-editor="${k}"]`));
+  if (titleInputs[0]) titleInputs[0].value = titles[2];
+  if (titleInputs[1]) titleInputs[1].value = titles[0];
+  if (titleInputs[2]) titleInputs[2].value = titles[1];
+
+  showStatus('Contents cycled A→B→C→A', 'success');
 }
 
 // ===== Clear editors =====
@@ -225,9 +318,13 @@ function handleFormatClear() {
 }
 
 function handleDiffClear() {
-  setEditorContent(editors.diffOriginal, '');
-  setEditorContent(editors.diffModified, '');
-  document.getElementById('diff-output').innerHTML = '';
+  ['A', 'B', 'C'].forEach(k => {
+    setEditorContent(getDiffEditor(k), '');
+    const input = document.querySelector(`.editor-title-input[data-editor="${k}"]`);
+    if (input) input.value = '';
+  });
+  document.getElementById('diff-output-container').innerHTML = '';
+  setDiffPrimary('A');
   showStatus('Editors cleared', 'success');
 }
 
@@ -259,14 +356,20 @@ function setupEvents() {
 
   // Diff panel
   document.getElementById('diff-btn').addEventListener('click', handleDiff);
-  document.getElementById('diff-swap-btn').addEventListener('click', handleSwap);
+  document.getElementById('diff-cycle-btn').addEventListener('click', handleCycle);
   document.getElementById('diff-clear-btn').addEventListener('click', handleDiffClear);
+
+  // Primary radio buttons
+  document.querySelectorAll('.primary-radio').forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      setDiffPrimary(e.target.value);
+    });
+  });
 
   // Diff language change
   document.getElementById('diff-language').addEventListener('change', (e) => {
     const lang = e.target.value;
-    updateEditorLanguage(editors.diffOriginal, lang);
-    updateEditorLanguage(editors.diffModified, lang);
+    ['A', 'B', 'C'].forEach(k => updateEditorLanguage(getDiffEditor(k), lang));
   });
 
   // Keyboard shortcut: Ctrl/Cmd+Enter
@@ -291,6 +394,9 @@ function init() {
 
   // Create editors
   initEditors();
+
+  // Set initial primary editor
+  setDiffPrimary('A');
 
   // Wire events
   setupEvents();

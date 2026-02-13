@@ -7,10 +7,16 @@
  * Compute and render a diff between two strings.
  * @param {string} original - Original text
  * @param {string} modified - Modified text
- * @param {object} options - { targetEl, viewMode, fileName }
+ * @param {object} options - { targetEl, viewMode, fileName, baseLabel, otherLabel }
  */
 export function computeAndRenderDiff(original, modified, options = {}) {
-  const { targetEl, viewMode = 'line-by-line', fileName = 'file' } = options;
+  const {
+    targetEl,
+    viewMode = 'line-by-line',
+    fileName = 'file',
+    baseLabel,
+    otherLabel,
+  } = options;
 
   if (!targetEl) {
     throw new Error('Target element is required for diff rendering.');
@@ -40,9 +46,12 @@ export function computeAndRenderDiff(original, modified, options = {}) {
     throw new Error('jsdiff library is not loaded. Check your internet connection.');
   }
 
+  const origHeader = baseLabel || `${fileName} (original)`;
+  const modHeader = otherLabel || `${fileName} (modified)`;
+
   const unifiedDiff = Diff.createTwoFilesPatch(
-    `${fileName} (original)`,
-    `${fileName} (modified)`,
+    origHeader,
+    modHeader,
     origText,
     modText,
     '',

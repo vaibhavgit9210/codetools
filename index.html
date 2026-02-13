@@ -216,14 +216,14 @@
           </svg>
           Compute Diff
         </button>
-        <button id="diff-swap-btn" class="btn btn-secondary" title="Swap panels">
+        <button id="diff-cycle-btn" class="btn btn-secondary" title="Cycle contents A→B→C→A">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="17 1 21 5 17 9"></polyline>
-            <path d="M3 11V9a4 4 0 0 1 4-4h14"></path>
-            <polyline points="7 23 3 19 7 15"></polyline>
-            <path d="M21 13v2a4 4 0 0 1-4 4H3"></path>
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <polyline points="1 20 1 14 7 14"></polyline>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"></path>
+            <path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"></path>
           </svg>
-          Swap
+          Cycle
         </button>
         <button id="diff-clear-btn" class="btn btn-ghost" title="Clear editors">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -236,19 +236,44 @@
     </div>
 
     <!-- Editors -->
-    <div class="editors-grid">
-      <div class="editor-pane">
-        <div class="editor-label">Original</div>
-        <div id="diff-original-editor" class="editor-mount"></div>
+    <div class="editors-grid editors-grid--triple">
+      <div id="diff-pane-a" class="editor-pane">
+        <div class="editor-label-bar">
+          <label class="primary-toggle">
+            <input type="radio" name="diff-primary" value="A" class="primary-radio" checked>
+            <span class="primary-dot"></span>
+          </label>
+          <input type="text" class="editor-title-input" data-editor="A" placeholder="Editor A">
+          <span class="primary-badge">BASE</span>
+        </div>
+        <div id="diff-editor-a" class="editor-mount"></div>
       </div>
-      <div class="editor-pane">
-        <div class="editor-label">Modified</div>
-        <div id="diff-modified-editor" class="editor-mount"></div>
+      <div id="diff-pane-b" class="editor-pane">
+        <div class="editor-label-bar">
+          <label class="primary-toggle">
+            <input type="radio" name="diff-primary" value="B" class="primary-radio">
+            <span class="primary-dot"></span>
+          </label>
+          <input type="text" class="editor-title-input" data-editor="B" placeholder="Editor B">
+          <span class="primary-badge">BASE</span>
+        </div>
+        <div id="diff-editor-b" class="editor-mount"></div>
+      </div>
+      <div id="diff-pane-c" class="editor-pane">
+        <div class="editor-label-bar">
+          <label class="primary-toggle">
+            <input type="radio" name="diff-primary" value="C" class="primary-radio">
+            <span class="primary-dot"></span>
+          </label>
+          <input type="text" class="editor-title-input" data-editor="C" placeholder="Editor C">
+          <span class="primary-badge">BASE</span>
+        </div>
+        <div id="diff-editor-c" class="editor-mount"></div>
       </div>
     </div>
 
     <!-- Diff Output -->
-    <div id="diff-output" class="diff-output"></div>
+    <div id="diff-output-container" class="diff-output-container"></div>
   </section>
 
   <!-- Status Bar -->
